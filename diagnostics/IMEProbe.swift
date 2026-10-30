@@ -69,8 +69,9 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
     report("selected source \(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()))")
     for (i, key) in keys.enumerated() {
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.2) {
-            let ev = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, characters: key.1, charactersIgnoringModifiers: key.1, isARepeat: false, keyCode: key.0)!
-            app.postEvent(ev, atStart: false)
+            report("post physical key \(key.0), access=\(CGPreflightPostEventAccess())")
+            CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!.postToPid(getpid())
+            CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: false)!.postToPid(getpid())
         }
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
