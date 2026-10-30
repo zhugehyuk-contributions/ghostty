@@ -5,6 +5,18 @@ import Testing
 import GhosttyKit
 
 @MainActor
+private func reportIME(_ text: String) {
+    let line = "\(ProcessInfo.processInfo.processIdentifier) \(text)\n"
+    let path = "/tmp/ghostty-ime-evidence.log"
+    if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil) }
+    if let file = FileHandle(forWritingAtPath: path) {
+        file.seekToEndOfFile()
+        file.write(Data(line.utf8))
+        try? file.close()
+    }
+}
+
+@MainActor
 struct KoreanIMEIntegrationTests {
     @Test func firstKoreanSyllable() async throws {
         let app = try #require((NSApp.delegate as? AppDelegate)?.ghostty.app)
@@ -31,7 +43,7 @@ struct KoreanIMEIntegrationTests {
         NSApp.activate(ignoringOtherApps: true)
         defer { window.close() }
         try await Task.sleep(for: .seconds(1))
-        print("IME REAL app=\(NSApp.isActive) key=\(window.isKeyWindow) responder=\(window.firstResponder === view) surface=\(view.surface != nil)")
+        reportIME("IME REAL app=\(NSApp.isActive) key=\(window.isKeyWindow) responder=\(window.firstResponder === view) surface=\(view.surface != nil)")
         #expect(TISSelectInputSource(korean) == noErr)
         try await Task.sleep(for: .seconds(1))
         for key: UInt16 in [5, 40, 1] {
@@ -40,7 +52,7 @@ struct KoreanIMEIntegrationTests {
             NSApp.postEvent(event, atStart: false)
             try await Task.sleep(for: .milliseconds(500))
             let bytes = try Data(contentsOf: URL(fileURLWithPath: capture))
-            print("IME REAL key=\(key) marked=\(view.hasMarkedText()) range=\(view.markedRange()) pty=\(String(decoding: bytes, as: UTF8.self).debugDescription)")
+            reportIME("IME REAL key=\(key) marked=\(view.hasMarkedText()) range=\(view.markedRange()) pty=\(String(decoding: bytes, as: UTF8.self).debugDescription)")
             #expect(view.hasMarkedText())
             #expect(bytes.isEmpty)
         }
@@ -48,7 +60,7 @@ struct KoreanIMEIntegrationTests {
         NSApp.postEvent(space, atStart: false)
         try await Task.sleep(for: .milliseconds(500))
         let committed = try Data(contentsOf: URL(fileURLWithPath: capture))
-        print("IME REAL final=\(String(decoding: committed, as: UTF8.self).debugDescription)")
+        reportIME("IME REAL final=\(String(decoding: committed, as: UTF8.self).debugDescription)")
         #expect(String(decoding: committed, as: UTF8.self) == "한 ")
     }
 }

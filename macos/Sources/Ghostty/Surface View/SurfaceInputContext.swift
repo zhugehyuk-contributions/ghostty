@@ -3,7 +3,7 @@ import Carbon
 
 extension Ghostty {
     /// An input context for a terminal, which cannot replace text already sent to the PTY.
-    class SurfaceInputContext: NSTextInputContext {
+    final class SurfaceInputContext: NSTextInputContext {
         override func activate() {
             super.activate()
 

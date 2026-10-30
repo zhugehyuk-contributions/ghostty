@@ -7,13 +7,15 @@ import Testing
 struct SurfaceInputContextTests {
     @Test func documentAccessIsDisabledOnlyForTerminalContext() throws {
         let previous = NSTextInputContext.current
-        let textView = NSTextView()
-        let editorContext = NSTextInputContext(client: textView)
-        let terminalContext = Ghostty.SurfaceInputContext(client: textView)
+        let editorView = NSTextView()
+        let terminalView = NSTextView()
+        let editorContext = NSTextInputContext(client: editorView)
+        let terminalContext = Ghostty.SurfaceInputContext(client: terminalView)
         defer {
             terminalContext.deactivate()
             editorContext.deactivate()
             previous?.activate()
+            withExtendedLifetime((editorView, terminalView)) {}
         }
 
         editorContext.activate()
