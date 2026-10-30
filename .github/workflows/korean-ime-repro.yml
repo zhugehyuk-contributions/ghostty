@@ -6,6 +6,9 @@ permissions:
   contents: read
 jobs:
   reproduce:
+    strategy:
+      matrix:
+        mode: [interpret, handle, ranges, activate]
     runs-on: macos-26
     timeout-minutes: 10
     steps:
@@ -20,11 +23,10 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Add :CFBundlePackageType string APPL' IMEProbe.app/Contents/Info.plist
       - name: Record native Korean composition callbacks
         run: |
-          open -W -n --stdout baseline.log --stderr baseline.log IMEProbe.app
+          open -W -n --stdout baseline.log --stderr baseline.log IMEProbe.app --args --${{ matrix.mode }}
           cat baseline.log
-          open -W -n --stdout handle.log --stderr handle.log IMEProbe.app --args --handle
-          cat handle.log
   ghostty-baseline:
+    if: contains(github.event.head_commit.message, 'build and test baseline')
     runs-on: macos-26
     timeout-minutes: 30
     steps:

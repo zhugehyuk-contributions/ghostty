@@ -18,8 +18,8 @@ final class InputView: NSView, NSTextInputClient {
         report("after marked=\(marked) commits=\(commits)")
     }
     func hasMarkedText() -> Bool { !marked.isEmpty }
-    func markedRange() -> NSRange { NSRange(location: 0, length: marked.utf16.count) }
-    func selectedRange() -> NSRange { NSRange(location: 0, length: 0) }
+    func markedRange() -> NSRange { NSRange(location: marked.isEmpty && CommandLine.arguments.contains("--ranges") ? NSNotFound : 0, length: marked.utf16.count) }
+    func selectedRange() -> NSRange { NSRange(location: CommandLine.arguments.contains("--ranges") ? NSNotFound : 0, length: 0) }
     func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
         marked = (string as? NSAttributedString)?.string ?? string as? String ?? ""
         report("setMarkedText \(String(reflecting: marked))")
@@ -58,6 +58,7 @@ let view = InputView(frame: window.contentView!.bounds)
 window.contentView = view
 window.makeKeyAndOrderFront(nil)
 window.makeFirstResponder(view)
+if CommandLine.arguments.contains("--activate") { view.inputContext?.activate() }
 app.activate(ignoringOtherApps: true)
 let keys: [(UInt16, String)] = [(5,"ㅎ"),(40,"ㅏ"),(1,"ㄴ"),(5,"ㅎ"),(40,"ㅏ"),(1,"ㄴ"),(51,"\u{7f}"),(51,"\u{7f}"),(51,"\u{7f}")]
 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
