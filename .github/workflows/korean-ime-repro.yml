@@ -1,0 +1,26 @@
+name: Korean IME reproduction
+on:
+  push:
+    branches: [diagnostics/korean-ime-13235]
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile native input probe
+        run: |
+          sw_vers
+          mkdir -p IMEProbe.app/Contents/MacOS
+          swiftc diagnostics/IMEProbe.swift -o IMEProbe.app/Contents/MacOS/IMEProbe
+          /usr/libexec/PlistBuddy -c 'Add :CFBundleExecutable string IMEProbe' IMEProbe.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c 'Add :CFBundleIdentifier string local.ghostty.ime-probe' IMEProbe.app/Contents/Info.plist
+          /usr/libexec/PlistBuddy -c 'Add :CFBundlePackageType string APPL' IMEProbe.app/Contents/Info.plist
+      - name: Record native Korean composition callbacks
+        run: |
+          open -W -n --stdout baseline.log --stderr baseline.log IMEProbe.app
+          cat baseline.log
+          open -W -n --stdout handle.log --stderr handle.log IMEProbe.app --args --handle
+          cat handle.log
