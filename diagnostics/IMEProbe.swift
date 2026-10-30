@@ -9,7 +9,7 @@ final class NativeTextView: NSTextView {
         super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
     }
     override func insertText(_ string: Any, replacementRange: NSRange) {
-        report("native insertText \(string)")
+        report("native insertText \(string) replacement=\(replacementRange) selected=\(selectedRange()) marked=\(markedRange())")
         super.insertText(string, replacementRange: replacementRange)
     }
 }
@@ -28,16 +28,16 @@ final class InputView: NSView, NSTextInputClient {
         }
         report("after marked=\(marked) commits=\(commits)")
     }
-    func hasMarkedText() -> Bool { !marked.isEmpty }
+    func hasMarkedText() -> Bool { report("hasMarkedText -> \(!marked.isEmpty)"); return !marked.isEmpty }
     func markedRange() -> NSRange { NSRange(location: marked.isEmpty && CommandLine.arguments.contains("--ranges") ? NSNotFound : 0, length: marked.utf16.count) }
-    func selectedRange() -> NSRange { NSRange(location: CommandLine.arguments.contains("--ranges") ? NSNotFound : 0, length: 0) }
+    func selectedRange() -> NSRange { let r = NSRange(location: CommandLine.arguments.contains("--ranges") ? NSNotFound : 0, length: 0); report("selectedRange -> \(r)"); return r }
     func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
         marked = (string as? NSAttributedString)?.string ?? string as? String ?? ""
         report("setMarkedText \(String(reflecting: marked))")
     }
     func unmarkText() { report("unmarkText"); marked = "" }
-    func validAttributesForMarkedText() -> [NSAttributedString.Key] { [] }
-    func attributedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?) -> NSAttributedString? { nil }
+    func validAttributesForMarkedText() -> [NSAttributedString.Key] { report("validAttributes"); return [] }
+    func attributedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?) -> NSAttributedString? { report("substring \(range)"); if CommandLine.arguments.contains("--actual") { actualRange?.pointee = NSRange(location: NSNotFound, length: 0) }; return nil }
     func characterIndex(for point: NSPoint) -> Int { 0 }
     func firstRect(forCharacterRange range: NSRange, actualRange: NSRangePointer?) -> NSRect {
         window?.convertToScreen(NSRect(x: 30, y: 30, width: 10, height: 20)) ?? .zero
@@ -51,6 +51,7 @@ final class InputView: NSView, NSTextInputClient {
 }
 
 let app = NSApplication.shared
+report("secure input \(IsSecureEventInputEnabled())")
 app.setActivationPolicy(.regular)
 app.finishLaunching()
 let prior = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
@@ -84,7 +85,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             let native = CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!
             let event = NSEvent(cgEvent: native)!
             report("enqueue native key \(key.0), chars=\(String(reflecting: event.characters))")
-            app.postEvent(event, atStart: false)
+            if CommandLine.arguments.contains("--discard") { view.inputContext?.discardMarkedText() }; app.postEvent(event, atStart: false)
         }
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
