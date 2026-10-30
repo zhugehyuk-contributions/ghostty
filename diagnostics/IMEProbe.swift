@@ -23,15 +23,14 @@ final class NativeTextView: NSTextView {
 
 final class TerminalInputContext: NSTextInputContext {
     override func activate() {
+        report("before activation current=\(NSTextInputContext.current === self) doc=\(String(describing: TSMGetActiveDocument()))")
+        if CommandLine.arguments.contains(where: { $0.contains("-pre-") }) { removeDocumentAccess() }
         super.activate()
         report("activate context current=\(NSTextInputContext.current === self)")
         removeDocumentAccess()
         if CommandLine.arguments.contains(where: { $0.contains("reactivate") }) { super.deactivate(); super.activate() }
         if CommandLine.arguments.contains(where: { $0.contains("async") }) { DispatchQueue.main.async { removeDocumentAccess() } }
-        if CommandLine.arguments.contains(where: { $0.contains("carbon") }), let doc = TSMGetActiveDocument() {
-            report("deactivate TSM \(DeactivateTSMDocument(doc))")
-            report("activate TSM \(ActivateTSMDocument(doc))")
-        }
+
 
     }
 }
