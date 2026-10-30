@@ -34,11 +34,15 @@ struct SurfaceInputContextTests {
 
     private func supportsDocumentAccess() throws -> Bool {
         let document = try #require(TSMGetActiveDocument())
-        return TSMGetDocumentProperty(
+        var size: UInt32 = 0
+        var value: UInt32 = 0
+        let status = TSMGetDocumentProperty(
             document,
             TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag),
-            0,
-            nil,
-            nil) == noErr
+            UInt32(MemoryLayout.size(ofValue: value)),
+            &size,
+            &value)
+        #expect(status == noErr || status == tsmDocPropertyNotFoundErr)
+        return status == noErr
     }
 }

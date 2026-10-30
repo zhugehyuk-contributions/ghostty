@@ -77,7 +77,8 @@ if CommandLine.arguments.contains("--capabilities") {
     let terminal = TerminalInputContext(client: terminalView)
     func status() -> OSStatus {
         guard let doc = TSMGetActiveDocument() else { return -1 }
-        return TSMGetDocumentProperty(doc, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag), 0, nil, nil)
+        var size: UInt32 = 0; var value: UInt32 = 0
+        return TSMGetDocumentProperty(doc, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag), 4, &size, &value)
     }
     editor.activate(); report("CAP editor \(status())")
     terminal.activate(); report("CAP terminal \(status())")
