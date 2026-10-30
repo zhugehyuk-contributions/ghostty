@@ -1,7 +1,18 @@
 import AppKit
 import Carbon
 
-func report(_ s: String) { print(s); fflush(stdout) }
+func report(_ s: String) { print("\(ProcessInfo.processInfo.systemUptime) \(s)"); fflush(stdout) }
+
+final class NativeTextView: NSTextView {
+    override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
+        report("native setMarkedText \(string)")
+        super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
+    }
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        report("native insertText \(string)")
+        super.insertText(string, replacementRange: replacementRange)
+    }
+}
 
 final class InputView: NSView, NSTextInputClient {
     var marked = ""
@@ -54,7 +65,7 @@ guard let korean = sources.first(where: { id($0) == "com.apple.inputmethod.Korea
 report("enable Korean input mode \(TISEnableInputSource(korean))")
 let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 420, height: 140), styleMask: [.titled, .closable], backing: .buffered, defer: false)
 window.title = "Ghostty Korean IME diagnostic"
-let view = InputView(frame: window.contentView!.bounds)
+let view: NSView = CommandLine.arguments.contains("--native") ? NativeTextView(frame: window.contentView!.bounds) : InputView(frame: window.contentView!.bounds)
 window.contentView = view
 window.makeKeyAndOrderFront(nil)
 window.makeFirstResponder(view)
@@ -69,14 +80,14 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
     report("select Korean \(TISSelectInputSource(korean))")
     report("selected source \(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()))")
     for (i, key) in keys.enumerated() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (CommandLine.arguments.contains("--delay") ? 2.0 : 0.0) + Double(i) * (CommandLine.arguments.contains("--slow") ? 0.8 : 0.2)) {
             let native = CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!
             let event = NSEvent(cgEvent: native)!
             report("enqueue native key \(key.0), chars=\(String(reflecting: event.characters))")
             app.postEvent(event, atStart: false)
         }
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
         TISSelectInputSource(prior)
         app.terminate(nil)
     }

@@ -8,7 +8,7 @@ jobs:
   reproduce:
     strategy:
       matrix:
-        mode: [interpret, handle, ranges, activate]
+        mode: [native, delay, slow]
     runs-on: macos-26
     timeout-minutes: 10
     steps:
