@@ -8,7 +8,7 @@ jobs:
   reproduce:
     strategy:
       matrix:
-        mode: [underline, clause, font]
+        mode: [document, document-key]
     runs-on: macos-26
     timeout-minutes: 10
     steps:

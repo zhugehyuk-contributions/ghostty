@@ -1,6 +1,12 @@
 import AppKit
 import Carbon
 
+func removeDocumentAccess() {
+    guard let document = TSMGetActiveDocument() else { report("no TSM document"); return }
+    let status = TSMRemoveDocumentProperty(document, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag))
+    report("remove document access \(status)")
+}
+
 func report(_ s: String) { print("\(ProcessInfo.processInfo.systemUptime) \(s)"); fflush(stdout) }
 
 final class NativeTextView: NSTextView {
@@ -21,6 +27,7 @@ final class InputView: NSView, NSTextInputClient {
     override func keyDown(with event: NSEvent) {
         report("keyDown key=\(event.keyCode) chars=\(String(reflecting: event.characters)) current=\(NSTextInputContext.current === inputContext) before=\(marked)")
         commits = []
+        if CommandLine.arguments.contains("--document-key") { removeDocumentAccess() }
         if CommandLine.arguments.contains("--handle") {
             report("handled=\(inputContext!.handleEvent(event))")
         } else {
@@ -78,6 +85,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
     window.makeKeyAndOrderFront(nil)
     window.makeFirstResponder(view)
     report("app active=\(app.isActive) key=\(window.isKeyWindow) responder=\(window.firstResponder === view) context=\(String(describing: view.inputContext)) current=\(String(describing: NSTextInputContext.current))")
+    if CommandLine.arguments.contains("--document") { removeDocumentAccess() }
     report("select Korean \(TISSelectInputSource(korean))")
     report("selected source \(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()))")
     for (i, key) in keys.enumerated() {
