@@ -74,8 +74,9 @@ func runKoreanIMEDiagnostic(_ app: ghostty_app_t) async {
             try await typeKeys([(39, []), (14, [])])
             check(try received() == before + "é", "dead-key accent composition")
         } else { log("SKIP US International unavailable") }
-        if let japanese = sources.first(where: { id($0).contains("Kotoeri") && id($0).hasSuffix(".Japanese") }) {
+        if let japanese = sources.first(where: { id($0).contains("Kotoeri.RomajiTyping") && id($0).hasSuffix(".Japanese") }) {
             for source in sources where id(source).contains("Kotoeri") { _ = TISEnableInputSource(source) }
+            log("Japanese source=\(id(japanese))")
             check(TISSelectInputSource(japanese) == noErr, "switch to Japanese")
             try await Task.sleep(for: .seconds(1))
             before = try received()
@@ -92,23 +93,34 @@ func runKoreanIMEDiagnostic(_ app: ghostty_app_t) async {
         check(try view.hasMarkedText() && received() == before, "Korean preedit after switching back")
         try await typeKeys([(49, [])])
         check(try received() == before + "한 ", "Korean commit after switching back")
-        check(EnableSecureEventInput() == noErr, "enable Secure Keyboard Entry")
-        capture += "-second"
-        try Data().write(to: URL(fileURLWithPath: capture))
-        config.command = "/bin/sh -c 'stty raw -echo; cat > \(capture)'"
-        let second = Ghostty.SurfaceView(app, baseConfig: config)
-        window.contentView = second
-        window.makeFirstResponder(second)
-        try await Task.sleep(for: .seconds(1))
-        check(TISSelectInputSource(korean) == noErr, "Korean in new terminal surface")
-        try await Task.sleep(for: .seconds(1))
-        try await typeKeys([(5, []), (40, []), (1, [])])
-        check(try second.hasMarkedText() && received().isEmpty, "new surface preedit with Secure Keyboard Entry")
-        try await typeKeys([(49, [])])
-        check(try received() == "한 ", "new surface commits exact Korean syllable")
-        check(DisableSecureEventInput() == noErr, "restore Secure Keyboard Entry")
+        var activeWindow = window
+        var windows = [window]
+        for (index, scenario) in [("new tab", false, false), ("new window", true, false), ("secure new tab", false, true)].enumerated() {
+            let (label, newWindow, secure) = scenario
+            if secure { check(EnableSecureEventInput() == noErr, "enable Secure Keyboard Entry") }
+            capture = "/tmp/ghostty-ime-pty-\(getpid())-\(index)"
+            try Data().write(to: URL(fileURLWithPath: capture))
+            config.command = "/bin/sh -c 'stty raw -echo; cat > \(capture)'"
+            let second = Ghostty.SurfaceView(app, baseConfig: config)
+            if newWindow {
+                activeWindow = NSWindow(contentRect: NSRect(x: 160, y: 160, width: 600, height: 300), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                activeWindow.isReleasedWhenClosed = false
+                windows.append(activeWindow)
+            }
+            activeWindow.contentView = second
+            activeWindow.makeKeyAndOrderFront(nil)
+            activeWindow.makeFirstResponder(second)
+            try await Task.sleep(for: .seconds(1))
+            check(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()) == id(korean), "\(label) retains selected Korean input method")
+            try await typeKeys([(5, []), (40, []), (1, [])])
+            log("\(label) key=\(activeWindow.isKeyWindow) responder=\(activeWindow.firstResponder === second) current=\(NSTextInputContext.current === second.inputContext) marked=\(second.hasMarkedText()) pty=\((try received()).debugDescription)")
+            check(try second.hasMarkedText() && received().isEmpty, "\(label) preedit stays out of PTY")
+            try await typeKeys([(49, [])])
+            check(try received() == "한 ", "\(label) commits exact Korean syllable")
+            if secure { check(DisableSecureEventInput() == noErr, "restore Secure Keyboard Entry") }
+        }
         TISSelectInputSource(prior)
-        window.close()
+        for item in windows { item.close() }
     } catch { log("ERROR \(error)"); failures += 1 }
     log("RESULT \(failures == 0 ? "PASS" : "FAIL") failures=\(failures)")
     exit(failures == 0 ? 0 : 1)

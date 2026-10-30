@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import ObjectiveC
 import Testing
 @testable import Ghostty
 
@@ -10,6 +11,8 @@ struct SurfaceInputContextTests {
         let editorView = NSTextView()
         let terminalView = NSTextView()
         let editorContext = NSTextInputContext(client: editorView)
+        editorContext.activate()
+        let editorDocument = try #require(TSMGetActiveDocument())
         let terminalContext = Ghostty.SurfaceInputContext(client: terminalView)
         defer {
             terminalContext.deactivate()
@@ -18,22 +21,33 @@ struct SurfaceInputContextTests {
             withExtendedLifetime((editorView, terminalView)) {}
         }
 
-        editorContext.activate()
-        #expect(try supportsDocumentAccess())
+        // Creating a terminal context must neither activate it nor change the editor.
+        #expect(NSTextInputContext.current === editorContext)
+        #expect(try supportsDocumentAccess(editorDocument))
+        // An IME selected before opening a new terminal reads this during activate().
+        // Checking only after activate() misses the first-consonant regression.
+        #expect(try !supportsDocumentAccess(document(of: terminalContext)))
 
         terminalContext.activate()
-        #expect(try !supportsDocumentAccess())
+        #expect(try !supportsDocumentAccess(try #require(TSMGetActiveDocument())))
 
         terminalContext.deactivate()
         editorContext.activate()
-        #expect(try supportsDocumentAccess())
+        #expect(try supportsDocumentAccess(try #require(TSMGetActiveDocument())))
 
         terminalContext.activate()
-        #expect(try !supportsDocumentAccess())
+        #expect(try !supportsDocumentAccess(try #require(TSMGetActiveDocument())))
     }
 
-    private func supportsDocumentAccess() throws -> Bool {
-        let document = try #require(TSMGetActiveDocument())
+    private func document(of context: NSTextInputContext) throws -> TSMDocumentID {
+        let ivar = try #require(class_getInstanceVariable(NSTextInputContext.self, "_documentID"))
+        let encoding = try #require(ivar_getTypeEncoding(ivar))
+        try #require(String(cString: encoding) == "^v")
+        return try #require(Unmanaged.passUnretained(context).toOpaque()
+            .advanced(by: ivar_getOffset(ivar)).load(as: TSMDocumentID?.self))
+    }
+
+    private func supportsDocumentAccess(_ document: TSMDocumentID) throws -> Bool {
         var size: UInt32 = 0
         var value: UInt32 = 0
         let status = TSMGetDocumentProperty(
