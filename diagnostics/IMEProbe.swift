@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import ObjectiveC
 
 func removeDocumentAccess() {
     guard let document = TSMGetActiveDocument() else { report("no TSM document"); return }
@@ -22,6 +23,18 @@ final class NativeTextView: NSTextView {
 }
 
 final class TerminalInputContext: NSTextInputContext {
+    override init(client: NSTextInputClient) {
+        super.init(client: client)
+        if CommandLine.arguments.contains(where: { $0.contains("-early-") }),
+           let ivar = class_getInstanceVariable(NSTextInputContext.self, "_documentID"),
+           let encoding = ivar_getTypeEncoding(ivar), String(cString: encoding) == "^v" {
+            let storage = Unmanaged.passUnretained(self).toOpaque().advanced(by: ivar_getOffset(ivar))
+            if let doc = storage.load(as: TSMDocumentID?.self) {
+                report("early document capability \(TSMRemoveDocumentProperty(doc, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag)))")
+            }
+        }
+    }
+
     override func activate() {
         report("before activation current=\(NSTextInputContext.current === self) doc=\(String(describing: TSMGetActiveDocument()))")
         if CommandLine.arguments.contains(where: { $0.contains("-pre-") }) { removeDocumentAccess() }
