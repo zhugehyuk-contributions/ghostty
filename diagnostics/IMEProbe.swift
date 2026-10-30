@@ -28,6 +28,11 @@ final class TerminalInputContext: NSTextInputContext {
         removeDocumentAccess()
         if CommandLine.arguments.contains(where: { $0.contains("reactivate") }) { super.deactivate(); super.activate() }
         if CommandLine.arguments.contains(where: { $0.contains("async") }) { DispatchQueue.main.async { removeDocumentAccess() } }
+        if CommandLine.arguments.contains(where: { $0.contains("carbon") }), let doc = TSMGetActiveDocument() {
+            report("deactivate TSM \(DeactivateTSMDocument(doc))")
+            report("activate TSM \(ActivateTSMDocument(doc))")
+        }
+
     }
 }
 
