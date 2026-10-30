@@ -24,3 +24,31 @@ jobs:
           cat baseline.log
           open -W -n --stdout handle.log --stderr handle.log IMEProbe.app --args --handle
           cat handle.log
+  ghostty-baseline:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare toolchain
+        run: |
+          if test -d /Applications/Xcode_27.1.app; then sudo xcode-select -s /Applications/Xcode_27.1.app; fi
+          xcodebuild -version
+          mkdir -p tools
+          curl -fLsS https://ziglang.org/download/0.17.0/zig-aarch64-macos-0.17.0.tar.xz -o tools/zig.tar.xz
+          echo 'b607e9b9234790a008116ae5bdb71c6243b84b9fb42a53a9e70fde41c06c536a  tools/zig.tar.xz' | shasum -a 256 -c
+          tar -xf tools/zig.tar.xz -C tools
+          curl -fLsS https://github.com/nushell/nushell/releases/download/0.116.1/nu-0.116.1-aarch64-apple-darwin.tar.gz -o tools/nu.tar.gz
+          tar -xf tools/nu.tar.gz -C tools
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .zig-cache
+            ~/.cache/zig
+          key: ghostty-13235-native-debug-7c6e1011
+      - name: Build native library
+        run: tools/zig-aarch64-macos-0.17.0/zig build -Demit-macos-app=false -Dxcframework-target=native -Doptimize=Debug
+      - name: Run macOS baseline tests
+        run: tools/nu-0.116.1-aarch64-apple-darwin/nu macos/build.nu --action test > baseline-tests.log 2>&1 || { tail -120 baseline-tests.log; exit 1; }
+      - name: Summarize baseline tests
+        if: always()
+        run: tail -100 baseline-tests.log || true
