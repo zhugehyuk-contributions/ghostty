@@ -8,7 +8,7 @@ jobs:
   reproduce:
     strategy:
       matrix:
-        mode: [native, ranges, actual, discard]
+        mode: [underline, clause, font]
     runs-on: macos-26
     timeout-minutes: 10
     steps:

@@ -36,7 +36,7 @@ final class InputView: NSView, NSTextInputClient {
         report("setMarkedText \(String(reflecting: marked))")
     }
     func unmarkText() { report("unmarkText"); marked = "" }
-    func validAttributesForMarkedText() -> [NSAttributedString.Key] { report("validAttributes"); return [] }
+    func validAttributesForMarkedText() -> [NSAttributedString.Key] { report("validAttributes"); if CommandLine.arguments.contains("--underline") { return [.underlineStyle] }; if CommandLine.arguments.contains("--clause") { return [.markedClauseSegment] }; if CommandLine.arguments.contains("--font") { return [.font] }; return [] }
     func attributedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?) -> NSAttributedString? { report("substring \(range)"); if CommandLine.arguments.contains("--actual") { actualRange?.pointee = NSRange(location: NSNotFound, length: 0) }; return nil }
     func characterIndex(for point: NSPoint) -> Int { 0 }
     func firstRect(forCharacterRange range: NSRange, actualRange: NSRangePointer?) -> NSRect {
