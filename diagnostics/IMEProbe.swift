@@ -69,9 +69,10 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
     report("selected source \(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()))")
     for (i, key) in keys.enumerated() {
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.2) {
-            report("post physical key \(key.0), access=\(CGPreflightPostEventAccess())")
-            CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!.postToPid(getpid())
-            CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: false)!.postToPid(getpid())
+            let native = CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!
+            let event = NSEvent(cgEvent: native)!
+            report("enqueue native key \(key.0), chars=\(String(reflecting: event.characters))")
+            app.postEvent(event, atStart: false)
         }
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
