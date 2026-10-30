@@ -3,6 +3,7 @@ import Carbon
 
 func removeDocumentAccess() {
     guard let document = TSMGetActiveDocument() else { report("no TSM document"); return }
+    report("removing from doc \(document)")
     let status = TSMRemoveDocumentProperty(document, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag))
     report("remove document access \(status)")
 }
@@ -23,8 +24,10 @@ final class NativeTextView: NSTextView {
 final class TerminalInputContext: NSTextInputContext {
     override func activate() {
         super.activate()
+        report("activate context current=\(NSTextInputContext.current === self)")
         removeDocumentAccess()
         if CommandLine.arguments.contains(where: { $0.contains("reactivate") }) { super.deactivate(); super.activate() }
+        if CommandLine.arguments.contains(where: { $0.contains("async") }) { DispatchQueue.main.async { removeDocumentAccess() } }
     }
 }
 
@@ -36,6 +39,11 @@ final class InputView: NSView, NSTextInputClient {
     override var acceptsFirstResponder: Bool { true }
     override func keyDown(with event: NSEvent) {
         report("keyDown key=\(event.keyCode) chars=\(String(reflecting: event.characters)) current=\(NSTextInputContext.current === inputContext) before=\(marked)")
+        if let doc = TSMGetActiveDocument() {
+            var size: UInt32 = 0; var value: UInt32 = 0
+            let status = TSMGetDocumentProperty(doc, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag), 4, &size, &value)
+            report("key doc \(doc) property=\(status)")
+        }
         commits = []
         if CommandLine.arguments.contains(where: { $0.hasPrefix("--document-key") }) { removeDocumentAccess() }
         if CommandLine.arguments.contains("--handle") {
