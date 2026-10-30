@@ -9,7 +9,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, 'build and test baseline') }}
     strategy:
       matrix:
-        mode: [capabilities]
+        mode: [context-reopen, context-secure]
     runs-on: macos-26
     timeout-minutes: 10
     steps:

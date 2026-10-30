@@ -98,7 +98,7 @@ guard let korean = sources.first(where: { id($0) == "com.apple.inputmethod.Korea
 report("enable Korean input mode \(TISEnableInputSource(korean))")
 let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 420, height: 140), styleMask: [.titled, .closable], backing: .buffered, defer: false)
 window.title = "Ghostty Korean IME diagnostic"
-let view: NSView = CommandLine.arguments.contains("--native") ? NativeTextView(frame: window.contentView!.bounds) : InputView(frame: window.contentView!.bounds)
+var view: NSView = CommandLine.arguments.contains("--native") ? NativeTextView(frame: window.contentView!.bounds) : InputView(frame: window.contentView!.bounds)
 window.contentView = view
 window.makeKeyAndOrderFront(nil)
 window.makeFirstResponder(view)
@@ -119,6 +119,20 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             let event = NSEvent(cgEvent: native)!
             report("enqueue native key \(key.0), chars=\(String(reflecting: event.characters))")
             if CommandLine.arguments.contains("--discard") { view.inputContext?.discardMarkedText() }; app.postEvent(event, atStart: false)
+        }
+    }
+    if CommandLine.arguments.contains("--context-reopen") || CommandLine.arguments.contains("--context-secure") {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if CommandLine.arguments.contains("--context-secure") { report("enable secure input \(EnableSecureEventInput())") }
+            view = InputView(frame: window.contentView!.bounds)
+            window.contentView = view
+            window.makeFirstResponder(view)
+            report("new client active=\(app.isActive) key=\(window.isKeyWindow) context=\(NSTextInputContext.current === view.inputContext)")
+        }
+        for (i, key) in keys.prefix(3).enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5 + Double(i) * 0.2) {
+                app.postEvent(NSEvent(cgEvent: CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!)!, atStart: false)
+            }
         }
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
