@@ -24,6 +24,7 @@ final class TerminalInputContext: NSTextInputContext {
     override func activate() {
         super.activate()
         removeDocumentAccess()
+        if CommandLine.arguments.contains(where: { $0.contains("reactivate") }) { super.deactivate(); super.activate() }
     }
 }
 
@@ -121,9 +122,9 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             if CommandLine.arguments.contains("--discard") { view.inputContext?.discardMarkedText() }; app.postEvent(event, atStart: false)
         }
     }
-    if CommandLine.arguments.contains("--context-reopen") || CommandLine.arguments.contains("--context-secure") {
+    if CommandLine.arguments.contains(where: { $0.hasSuffix("-reopen") || $0.hasSuffix("-secure") }) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            if CommandLine.arguments.contains("--context-secure") { report("enable secure input \(EnableSecureEventInput())") }
+            if CommandLine.arguments.contains(where: { $0.hasSuffix("-secure") }) { report("enable secure input \(EnableSecureEventInput())") }
             view = InputView(frame: window.contentView!.bounds)
             window.contentView = view
             window.makeFirstResponder(view)
