@@ -68,19 +68,20 @@ jobs:
             macos/GhosttyKit.xcframework
             zig-out
           key: ghostty-13235-xcframework-7c6e1011-macos26-arm64-v1
-      - name: Run macOS baseline tests
-        run: tools/nu-0.116.1-aarch64-apple-darwin/nu macos/build.nu --action test > baseline-tests.log 2>&1 || { tail -120 baseline-tests.log; exit 1; }
-      - name: Summarize native test evidence
-        if: always()
+      - name: Build diagnostic app
+        run: tools/nu-0.116.1-aarch64-apple-darwin/nu macos/build.nu --action build > baseline-tests.log 2>&1 || { tail -100 baseline-tests.log; exit 1; }
+      - name: Exercise real Ghostty with native Korean IME
         run: |
-          cat /tmp/ghostty-ime-evidence.log || true
-          results=($HOME/Library/Developer/Xcode/DerivedData/Ghostty-*/Logs/Test/*.xcresult)
-          xcrun xcresulttool get test-results summary --path "${results[0]}" || true
-          tail -30 baseline-tests.log || true
+          open -W -n --env GHOSTTY_IME_DIAGNOSTIC=1 --stdout "$PWD/native-input.log" --stderr "$PWD/native-input.log" macos/build/Debug/Ghostty.app
+          cat native-input.log
+          if test '${{ matrix.version }}' = baseline; then
+            grep 'IME REAL RESULT FAIL' native-input.log
+          else
+            grep 'IME REAL RESULT PASS' native-input.log
+          fi
       - name: Run complete macOS regression suite
         if: matrix.version == 'fixed'
         run: |
-          rm macos/Tests/Ghostty/KoreanIMEIntegrationTests.swift
           git show 7c6e1011c237aaac3d19d094b3c4bdada3b21bc8:macos/build.nu > macos/build.nu
           tools/nu-0.116.1-aarch64-apple-darwin/nu macos/build.nu --action test > regression-tests.log 2>&1 || { tail -100 regression-tests.log; exit 1; }
           tail -30 regression-tests.log

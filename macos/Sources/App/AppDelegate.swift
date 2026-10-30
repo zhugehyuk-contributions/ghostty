@@ -212,6 +212,13 @@ class AppDelegate: NSObject,
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if ProcessInfo.processInfo.environment["GHOSTTY_IME_DIAGNOSTIC"] == "1" {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                if let app = self.ghostty.app { await runKoreanIMEDiagnostic(app) }
+            }
+        }
+
         // System settings overrides
         UserDefaults.ghostty.register(defaults: [
             // Disable this so that repeated key events make it through to our terminal views.
