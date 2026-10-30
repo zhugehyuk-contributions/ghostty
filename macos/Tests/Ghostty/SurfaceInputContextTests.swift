@@ -22,7 +22,7 @@ struct SurfaceInputContextTests {
         }
 
         // Creating a terminal context must neither activate it nor change the editor.
-        #expect(NSTextInputContext.current === editorContext)
+        #expect(TSMGetActiveDocument() == editorDocument)
         #expect(try supportsDocumentAccess(editorDocument))
         // An IME selected before opening a new terminal reads this during activate().
         // Checking only after activate() misses the first-consonant regression.
