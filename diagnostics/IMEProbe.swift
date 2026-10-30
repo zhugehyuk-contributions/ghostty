@@ -20,14 +20,23 @@ final class NativeTextView: NSTextView {
     }
 }
 
+final class TerminalInputContext: NSTextInputContext {
+    override func activate() {
+        super.activate()
+        removeDocumentAccess()
+    }
+}
+
 final class InputView: NSView, NSTextInputClient {
+    private lazy var terminalInputContext = TerminalInputContext(client: self)
+    override var inputContext: NSTextInputContext? { CommandLine.arguments.contains(where: { $0.hasPrefix("--context") }) ? terminalInputContext : super.inputContext }
     var marked = ""
     var commits: [String] = []
     override var acceptsFirstResponder: Bool { true }
     override func keyDown(with event: NSEvent) {
         report("keyDown key=\(event.keyCode) chars=\(String(reflecting: event.characters)) current=\(NSTextInputContext.current === inputContext) before=\(marked)")
         commits = []
-        if CommandLine.arguments.contains("--document-key") { removeDocumentAccess() }
+        if CommandLine.arguments.contains(where: { $0.hasPrefix("--document-key") }) { removeDocumentAccess() }
         if CommandLine.arguments.contains("--handle") {
             report("handled=\(inputContext!.handleEvent(event))")
         } else {
@@ -89,7 +98,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
     report("select Korean \(TISSelectInputSource(korean))")
     report("selected source \(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()))")
     for (i, key) in keys.enumerated() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + (CommandLine.arguments.contains("--delay") ? 2.0 : 0.0) + Double(i) * (CommandLine.arguments.contains("--slow") ? 0.8 : 0.2)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (CommandLine.arguments.contains(where: { $0.hasSuffix("-delay") }) ? 2.0 : 0.0) + Double(i) * (CommandLine.arguments.contains("--slow") ? 0.8 : 0.2)) {
             let native = CGEvent(keyboardEventSource: nil, virtualKey: key.0, keyDown: true)!
             let event = NSEvent(cgEvent: native)!
             report("enqueue native key \(key.0), chars=\(String(reflecting: event.characters))")

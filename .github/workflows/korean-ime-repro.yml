@@ -9,7 +9,7 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, 'build and test baseline') }}
     strategy:
       matrix:
-        mode: [document, document-key]
+        mode: [context, context-delay, document-key-delay]
     runs-on: macos-26
     timeout-minutes: 10
     steps:
