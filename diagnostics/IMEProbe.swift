@@ -70,6 +70,21 @@ let app = NSApplication.shared
 report("secure input \(IsSecureEventInputEnabled())")
 app.setActivationPolicy(.regular)
 app.finishLaunching()
+if CommandLine.arguments.contains("--capabilities") {
+    let editorView = NSTextView()
+    let terminalView = NSTextView()
+    let editor = NSTextInputContext(client: editorView)
+    let terminal = TerminalInputContext(client: terminalView)
+    func status() -> OSStatus {
+        guard let doc = TSMGetActiveDocument() else { return -1 }
+        return TSMGetDocumentProperty(doc, TSMDocumentPropertyTag(kTSMDocumentSupportDocumentAccessPropertyTag), 0, nil, nil)
+    }
+    editor.activate(); report("CAP editor \(status())")
+    terminal.activate(); report("CAP terminal \(status())")
+    terminal.deactivate(); editor.activate(); report("CAP restored editor \(status())")
+    terminal.activate(); report("CAP reactivated terminal \(status())")
+    exit(0)
+}
 let prior = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
 let sources = TISCreateInputSourceList(nil, true).takeRetainedValue() as! [TISInputSource]
 func id(_ source: TISInputSource) -> String {
