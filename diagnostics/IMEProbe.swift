@@ -47,9 +47,11 @@ let sources = TISCreateInputSourceList(nil, true).takeRetainedValue() as! [TISIn
 func id(_ source: TISInputSource) -> String {
     Unmanaged<CFString>.fromOpaque(TISGetInputSourceProperty(source, kTISPropertyInputSourceID)).takeUnretainedValue() as String
 }
-for s in sources { report("source \(id(s))") }
+if let parent = sources.first(where: { id($0) == "com.apple.inputmethod.Korean" }) {
+    report("enable Korean input method \(TISEnableInputSource(parent))")
+}
 guard let korean = sources.first(where: { id($0) == "com.apple.inputmethod.Korean.2SetKorean" }) else { fatalError("Korean IME unavailable") }
-TISEnableInputSource(korean)
+report("enable Korean input mode \(TISEnableInputSource(korean))")
 let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 420, height: 140), styleMask: [.titled, .closable], backing: .buffered, defer: false)
 window.title = "Ghostty Korean IME diagnostic"
 let view = InputView(frame: window.contentView!.bounds)
@@ -64,6 +66,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
     window.makeFirstResponder(view)
     report("app active=\(app.isActive) key=\(window.isKeyWindow) responder=\(window.firstResponder === view) context=\(String(describing: view.inputContext)) current=\(String(describing: NSTextInputContext.current))")
     report("select Korean \(TISSelectInputSource(korean))")
+    report("selected source \(id(TISCopyCurrentKeyboardInputSource().takeRetainedValue()))")
     for (i, key) in keys.enumerated() {
         DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.2) {
             let ev = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, characters: key.1, charactersIgnoringModifiers: key.1, isARepeat: false, keyCode: key.0)!
